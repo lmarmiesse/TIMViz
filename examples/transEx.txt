@@ -1,0 +1,6 @@
+Sample1	Sample2	Sample3	Sample4
+gene1	8.4	8.6	8.6	9.1
+gene2	11.1	10.9	10.8	11.5
+gene3	7.8	7.9	8.0	8.2
+gene4	3.4	4.5	6.2	8.2
+gene5	6.5	5.3	2.3	3.5

@@ -1,0 +1,569 @@
+///////////////////// 
+$(document).ready(function () {
+    
+    $('#toggle-view li').click(function () {
+        var text = $(this).children('div.panel');
+        if (text.is(':hidden')) {
+            text.slideDown('200');
+            $(this).children('span').html('-');        
+        } else {
+            text.slideUp('200');
+            $(this).children('span').html('+');        
+        }
+        
+    });
+    
+    
+    
+    
+    
+});
+///////////////////// 
+
+
+
+var pathwaysToShow = Array();
+var touchingPathways = Array();
+var showMetabs = false;
+
+//used to simplify display
+var maxMetabConnections = 20;
+
+
+function displayGraph(){
+
+	cy = cytoscape({
+  container: document.getElementById('cy'),
+  
+  style: cytoscape.stylesheet()
+    .selector('node')
+      .css({
+        'background-color':'data(color)',
+        'shape': 'data(shape)',
+        'content' : 'data(id)',
+        'border-color': 'black',
+        'border-width': 1,
+        'border-opacity': 1,
+        'border-style' : 'data(borderStyle)'
+      })
+    .selector('edge')
+      .css({
+        'target-arrow-shape': 'triangle',
+        'width': 3,
+        'line-color': 'black',
+        'target-arrow-color': 'black'
+      })
+    ,
+  
+  elements: {
+nodes: [
+],
+edges: [
+]},
+layout: {
+    name: 'cose',
+    directed: true,
+    roots: '#a',
+    padding: 10
+  }
+});
+
+	cy.on('tap',function(event){
+		
+		var evtTarget = event.cyTarget;
+		 
+		if( evtTarget === cy ){
+		  } else {
+			 var node = evtTarget;
+			 if (node.data('type')=='reac'){
+				handleClickOnNode (node.id());
+			 }
+		  }
+		
+	});
+
+	var addedReactions = Array();
+
+	for (j in pathwaysToShow){
+		
+		pathwayToFind = pathwaysToShow[j];
+
+		for (i in nodes){
+			
+			if (reacToPatways[nodes[i].data.id]!=undefined){
+		
+				if (reacToPatways[nodes[i].data.id].indexOf(pathwayToFind) > -1){
+				
+					if (addedReactions.indexOf(nodes[i].data.id)==-1){
+						cy.add(nodes[i]);
+						addedReactions.push(nodes[i].data.id);
+					}
+				
+				}
+			}
+		}
+	}
+	
+	////////////////////////////////////// IF METABS
+	if (showMetabs){
+		var edgesToAdd = Array();
+		var metabsToAdd = Array();
+
+		for (i in edges){
+			
+			source = edges[i].data.source;
+			target = edges[i].data.target;
+			
+			if (addedReactions.indexOf(source) >-1){
+				edgesToAdd.push(edges[i]);
+				metabsToAdd.push(target);
+			}
+			
+			if (addedReactions.indexOf(target) >-1){
+				edgesToAdd.push(edges[i]);
+				metabsToAdd.push(source);
+			}
+		}
+
+
+		for (i in nodes){
+			id = nodes[i].data.id;
+			if (metabsToAdd.indexOf(id) > -1){
+				cy.add(nodes[i]);
+			}
+		}
+
+
+		
+		cy.add(edgesToAdd);
+	
+	}
+		////////////////////////////////////// 
+		
+		
+		////////////////////////////////////// IF NO METABS
+	else{
+		var edgesToAdd = Array();
+		
+		var productMetabs = {};
+		var metabsList = Array();
+		
+		for (i in edges){
+		
+			source = edges[i].data.source;
+			target = edges[i].data.target;
+			
+			if (addedReactions.indexOf(source) >-1){
+				metabsList.push(target);
+				if (productMetabs[source]!=undefined){
+					productMetabs[source].push(target);
+				}
+				else{
+					productMetabs[source]=[target];
+				}
+			}
+			
+			
+			//if the metab is source, we check if reac is reversible
+			if (addedReactions.indexOf(target) >-1){
+				metabsList.push(source);
+				for (i in nodes){
+					id = nodes[i].data.id;
+					if (id == target){
+						if(nodes[i].data.reversible=="True"){
+							if (productMetabs[target]!=undefined){
+								productMetabs[target].push(source);
+							}
+							else{
+								productMetabs[target]=[source];
+							}
+						}
+						break;
+					}
+				}
+			}
+
+		}
+		
+		///////////////////////// Pour diminuer le nb de noeuds ...
+		a = countOccurences(metabsList);
+		l = a[0];
+		occ = a[1];
+		metabsToBan = Array();
+		for (i in occ){
+			if (occ[i]>maxMetabConnections){
+				metabsToBan.push(l[i]);
+			}
+		}
+		
+		for (r in productMetabs){
+				
+			newList = Array();
+			
+			m = productMetabs[r];
+			
+			for (b in m){
+				m2 = m[b];
+				if (metabsToBan.indexOf(m2)==-1){
+					newList.push(m2);
+				}
+			}
+			productMetabs[r]=newList;
+		}
+		
+		///////////////////////// 
+		reacLinks = {};
+		
+		for (r in productMetabs){
+				
+			m = productMetabs[r];
+			
+			for (i in edges){
+		
+				source = edges[i].data.source;
+				target = edges[i].data.target;
+
+				if (m.indexOf(source) >-1){
+					if (addedReactions.indexOf(target)>-1){
+						if (r != target){
+							if (reacLinks[r]!=undefined){
+								if (reacLinks[r].indexOf(target)==-1){
+									reacLinks[r].push(target);
+								}
+							}
+							else{
+								reacLinks[r] = [target];
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		id=0;
+		
+		
+		
+		for (source in reacLinks){
+			
+			for (t in reacLinks[source]){
+				id = id+1;
+				
+				target = reacLinks[source][t];
+				
+				edgesToAdd.push({ group: 'edges',data: { id: "'"+id+"'", weight: 1, source: source, target: target } });
+			}
+				
+		}
+			cy.add(edgesToAdd);
+	}
+		////////////////////////////////////// 
+		
+		
+		console.log("Number of nodes : "+cy.nodes().length);
+		console.log("Number of edges : "+cy.edges().length);
+		
+		updateshowNames($("#showMetabsBox"));
+
+
+		updateShownPathwaysTab();
+		
+}
+
+
+function addPathway(){
+	
+	pathway = $("#pathwayChoice option:selected" ).text();
+	
+	if (pathwaysToShow.indexOf(pathway)==-1){
+		pathwaysToShow.push(pathway);
+	}
+	
+	//~ pathwaysToShow=pathways;
+	
+	displayGraph();
+	updateTouchingPatways();
+}
+
+function pngExport(){
+	var png = cy.png({
+		full:true,
+		scale:5
+	});
+
+	window.open(png);
+}
+
+
+function scoresExport(){
+
+//	console.log(uniqueNumber);
+
+	window.open("analyses/"+uniqueNumber+"/scores.txt");
+}
+
+
+function removePathway(){
+	
+	pathway = $("#pathwayChoice option:selected" ).text();
+	
+	if (pathwaysToShow.indexOf(pathway)>-1){
+		pathwaysToShow.splice(pathwaysToShow.indexOf(pathway),1);
+	}
+	
+	displayGraph();
+	updateTouchingPatways();
+}
+
+function updateTouchingPatways(){
+	
+	touchingPathways = Array();
+	
+	var addedReactions = Array();
+	
+	for (j in pathwaysToShow){
+		
+		pathway = pathwaysToShow[j];
+		
+		for (i in nodes){
+			
+			if (reacToPatways[nodes[i].data.id]!=undefined){
+		
+				if (reacToPatways[nodes[i].data.id].indexOf(pathway) > -1){
+					
+					addedReactions.push(nodes[i].data.id);
+					
+					for (p in reacToPatways[nodes[i].data.id]){
+						
+						pathwayToTest = reacToPatways[nodes[i].data.id][p];
+						
+						//if not already in the list
+						if (pathwaysToShow.indexOf(pathwayToTest)==-1 && touchingPathways.indexOf(pathwayToTest)==-1){
+							touchingPathways.push(pathwayToTest);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	var addedMetabs = Array();
+	
+	for (i in edges){
+		
+		source = edges[i].data.source;
+		target = edges[i].data.target;
+		
+		if (addedReactions.indexOf(source) >-1){
+			if (addedMetabs.indexOf(target)==-1){
+				addedMetabs.push(target);
+			}
+		}
+		
+		if (addedReactions.indexOf(target) >-1){
+			if (addedMetabs.indexOf(source)==-1){
+				addedMetabs.push(source);
+			}
+		}
+	}
+	
+	var touchingReactions = {};
+	
+	for (i in edges){
+		
+		source = edges[i].data.source;
+		target = edges[i].data.target;
+		
+		if (addedMetabs.indexOf(source) >-1){
+			if (touchingReactions[source]!=undefined){
+				touchingReactions[source].push(target);
+			}
+			else{
+				touchingReactions[source] = [target];
+			}
+		}
+		
+		if (addedMetabs.indexOf(target) >-1){
+			if (touchingReactions[source]!=undefined){
+				touchingReactions[source].push(source);
+			}
+			else{
+				touchingReactions[target] = [source];
+			}
+		}
+	}
+	
+	
+	for (i in touchingReactions){
+	
+		reacs = touchingReactions[i];
+			
+		for (j in reacs){
+
+			reac = reacs[j];
+			
+			for (p in reacToPatways[reac]){
+					
+				pathwayToTest = reacToPatways[reac][p];
+			
+				if (pathwaysToShow.indexOf(pathwayToTest)==-1 && touchingPathways.indexOf(pathwayToTest)==-1){
+					touchingPathways.push(pathwayToTest);
+				}
+			}
+		}
+	}
+	
+
+	$("#touchingPathwaysList").empty();
+
+
+	for (p in touchingPathways){
+		$("#touchingPathwaysList").append("<li>"+touchingPathways[p]+"</li>");	
+	}
+
+	console.log(touchingPathways);
+	
+}
+
+
+
+
+function updateShownPathwaysTab(){
+
+	$("#pathwaysList").empty();
+
+
+	for (p in pathwaysToShow){
+		$("#pathwaysList").append("<li>"+pathwaysToShow[p]+"</li>");	
+	}
+
+	if (pathwaysToShow.length==0){
+		$("#pathwaysList").append("<h4 style='color:red;'>There are no selected pathways. Please select a pathway to display</h4>");	
+	}
+	
+
+	//$("#displayedPathways").text(pathwaysToShow.toString().replace(",","<br/>"));	
+	
+
+}
+
+function updateshowMetabs(box) {
+
+	if($(box).is(':checked')){
+		showMetabs = true;
+	}
+	else{
+		showMetabs = false;	
+	}
+
+	displayGraph();
+}
+
+function updateshowNames(box) {
+
+
+
+	if($(box).is(':checked')){
+		
+		cy.style().selector('node').css('content', 'data(id)').update();
+		
+	}
+	else{
+		cy.style().selector('node').css('content', '').update();
+	}
+}
+
+function handleClickOnNode(node){
+	
+		//the reaction div is set
+		reacDiv = $("#reactionDiv");
+		
+		$("#reactionDivInfo").empty();
+		$("#reactionDivID").text(node);
+	
+		if (reacToPatways[node]!=undefined){
+			$("#reactionDivPathways").text("Pathways : "+reacToPatways[node]);
+		}
+		
+		//name with stoichiometry
+		reactants = {};
+		products = {};
+		reacName = "";
+		
+		for (i in edges){
+		
+			source = edges[i].data.source;
+			sourceName = edges[i].data.sourceName;
+			target = edges[i].data.target;
+			targetName = edges[i].data.targetName;
+			stoe = edges[i].data.stoichiometry;
+			
+			if (source == node){
+				products[targetName] = stoe;
+				reacName = sourceName;
+			}
+			
+			if (target == node){
+				reactants[sourceName] = stoe;
+				reacName = targetName;
+			}
+		}
+
+		$("#reactionDivName").text(reacName);
+		
+		reacList = $("#reactantsList");
+		reacList.empty();
+		
+		for (reactant in reactants){
+			
+			stoe = reactants[reactant];
+			reacList.append('<li>'+stoe+' x '+reactant+'</li>');
+		}
+		
+	
+		prodList = $("#productsList");
+		prodList.empty();
+		
+		for (product in products){
+			
+			stoe = products[product];
+			prodList.append('<li>'+stoe+' x '+product+'</li>');
+		}
+		
+
+		// genes in reaction's GPR
+		gprList = $("#gprList");
+		gprList.empty();
+		if (reacToGPR[node]!=undefined){
+		
+			for (geneInd in reacToGPR[node]){
+				
+				gene  = reacToGPR[node][geneInd];
+				color = geneToColor[gene];
+				
+				gprList.append('<li>'+gene+' : <canvas style="background-color:'+color+';width:15px;height:15px;border:1px solid #000"></canvas></li>');
+			}
+		
+		}
+		//nide their colors
+		
+}
+
+function countOccurences(arr) {
+    var a = [], b = [], prev;
+
+    arr.sort();
+    for ( var i = 0; i < arr.length; i++ ) {
+        if ( arr[i] !== prev ) {
+            a.push(arr[i]);
+            b.push(1);
+        } else {
+            b[b.length-1]++;
+        }
+        prev = arr[i];
+    }
+
+	
+
+    return [a, b];
+}

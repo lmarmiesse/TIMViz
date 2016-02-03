@@ -1,0 +1,107 @@
+body { 
+  font: 14px helvetica neue, helvetica, arial, sans-serif;
+}
+
+#cy {
+  height: 530px;
+  width:53%;
+  border:1px solid;
+  float:left;
+  
+
+}
+
+#reactionDiv {
+
+  width: 30%;
+  border: 1px solid;
+  float:right;
+}
+
+
+#pathwaysDiv {
+
+
+  border: 1px solid;
+ 
+ margin-top: 0.5cm;
+}
+
+#touchingPathwaysDiv {
+
+
+  border: 1px solid;
+  
+ margin-top: 0.5cm;
+}
+#diffExprPathwaysDiv {
+
+  border: 1px solid;
+
+ margin-top: 0.5cm;
+}
+
+
+#toggle-view {
+	word-wrap: break-word;
+    list-style:none;    
+    font-family:arial;
+    font-size:13px;
+    margin:0;
+    padding:0;
+/*
+    width:300px;
+*/
+}
+    #toggle-view li.bar {
+        margin:10px;
+        border-bottom:1px solid #ccc;
+        position:relative;
+        cursor:pointer;
+    }
+    
+    #toggle-view h3 {
+        margin:0;
+        font-size:14px;
+    }
+    #toggle-view span {
+        position:absolute;
+        right:5px; top:0;
+/*
+        color:#ccc;
+*/
+        font-size:13px;
+    }
+    
+    #toggle-view .panel {
+        margin:5px 0;
+/*
+        display:none;
+*/
+    }    
+
+
+
+
+
+.footer {
+	text-align: center;
+	padding: 10px 0;
+	margin-top: 70px;
+	border-top: 1px solid #e5e5e5;
+	background-color: #f5f5f5;
+}
+
+.hero-unit {
+  margin-top: 10px;
+  padding: 60px;
+  margin-bottom: 30px;
+  font-size: 18px;
+  font-weight: 200;
+  line-height: 30px;
+  color: inherit;
+  background-color: #eeeeee;
+  -webkit-border-radius: 6px;
+     -moz-border-radius: 6px;
+          border-radius: 6px;
+}
